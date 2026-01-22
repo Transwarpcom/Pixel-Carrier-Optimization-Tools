@@ -18,34 +18,44 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get Version
-        id: get_version
+      - name: Get Version & Check Tag
+        id: version_check
         run: |
           VERSION=$(grep "^version=" module.prop | cut -d'=' -f2)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Module Version: $VERSION"
+          echo "Detected version: $VERSION"
+
+          # Check if tag exists
+          if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+            echo "Tag $VERSION already exists."
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+            echo "Tag $VERSION does not exist."
+          fi
 
       - name: Generate Changelog
         id: changelog
-        if: startsWith(github.ref, 'refs/tags/')
+        if: (github.ref == 'refs/heads/main' && env.TAG_EXISTS == 'false') || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         run: |
+          # Try to find the previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           echo "Previous tag: $PREV_TAG"
 
           if [ -z "$PREV_TAG" ]; then
             LOGS=$(git log --pretty=format:"* %s (%h)" --no-merges)
           else
+            # If we are creating a new tag, HEAD is the new tag.
             LOGS=$(git log --pretty=format:"* %s (%h)" --no-merges $PREV_TAG..HEAD)
           fi
 
-          # Create a beautiful markdown body
           echo "## 🚀 Changes in $VERSION" > release_notes.md
           echo "" >> release_notes.md
           echo "$LOGS" >> release_notes.md
           echo "" >> release_notes.md
           echo "## 📦 Diff" >> release_notes.md
           if [ -n "$PREV_TAG" ]; then
-             echo "View the full diff: [${PREV_TAG}...${{ github.ref_name }}](${{ github.server_url }}/${{ github.repository }}/compare/${PREV_TAG}...${{ github.ref_name }})" >> release_notes.md
+             echo "View the full diff: [${PREV_TAG}...${VERSION}](${{ github.server_url }}/${{ github.repository }}/compare/${PREV_TAG}...${VERSION})" >> release_notes.md
           else
              echo "Initial Release" >> release_notes.md
           fi
@@ -63,9 +73,10 @@ jobs:
           path: pixel_carrier_opt.zip
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: (github.ref == 'refs/heads/main' && env.TAG_EXISTS == 'false') || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ env.VERSION }}
           body_path: release_notes.md
           files: pixel_carrier_opt.zip
           name: Pixel Carrier Optimization ${{ env.VERSION }}
