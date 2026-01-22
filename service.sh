@@ -145,9 +145,11 @@ upsert_int_array "qns.voice_ngran_ssrsrp_int_array" -124 -124 -124 -124
 
 log "Applying GPS Corrections..."
 # Replace agnss.goog PSDS/LTO servers with Broadcom
-URLS="http://glpals.com/7day/v2/latest/lto2.dat"
-URLS2="http://glpals.com/7day/v2/latest/lto.dat"
-upsert_string_array "gps.psds_servers_string_array" "$URLS" "$URLS2"
+URLS="http://gllto.glpals.com/7day/v2/latest/lto2.dat"
+URLS2="http://gllto.glpals.com/7day/v2/latest/lto.dat"
+URLS3="http://gllto1.glpals.com/7day/v2/latest/lto2.dat"
+URLS4="http://gllto1.glpals.com/7day/v2/latest/lto.dat"
+upsert_string_array "gps.psds_servers_string_array" "$URLS" "$URLS2" "$URLS3" "$URLS4"
 
 log "Applying UI Enhancements..."
 # Enable 5G+ for N78
