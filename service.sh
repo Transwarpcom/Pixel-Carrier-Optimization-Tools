@@ -24,7 +24,9 @@ for i in $(seq 1 60); do
     CANDIDATES=$(find "$TARGET_DIR" -type f -name "*carrier_config*.xml")
     FOUND_FILES=""
     for f in $CANDIDATES; do
-        if echo "$f" | grep -qE "China_Unicom|China_Telecom|China_Mobile|China_Broadnet"; then
+        # Check for Names OR Carrier IDs
+        # 1435: Mobile, 1436: Unicom, 2236: Telecom
+        if echo "$f" | grep -qE "China_Unicom|China_Telecom|China_Mobile|China_Broadnet|1435|1436|2236"; then
             FOUND_FILES="$FOUND_FILES $f"
         fi
     done
@@ -57,15 +59,27 @@ remove_key() {
 }
 
 # Insert functions
+# Safe append: Remove closing tag via substitution (handles single/multi-line), then append new tag + closing tag
+prepare_file_for_append() {
+    local file="$1"
+    # Remove </carrier_config> from anywhere in the file
+    sed -i "s/<\/carrier_config>//g" "$file"
+}
+
+finish_file() {
+    local file="$1"
+    # Append the closing tag
+    echo "</carrier_config>" >> "$file"
+}
+
 upsert_boolean() {
     local key="$1"
     local value="$2"
     local file="$3"
     remove_key "$key" "$file"
-    # Insert before closing tag (temporarily remove closing tag and append)
-    sed -i "/<\/carrier_config>/d" "$file"
+    prepare_file_for_append "$file"
     echo "    <boolean name=\"$key\" value=\"$value\" />" >> "$file"
-    echo "</carrier_config>" >> "$file"
+    finish_file "$file"
 }
 
 upsert_string() {
@@ -73,9 +87,9 @@ upsert_string() {
     local value="$2"
     local file="$3"
     remove_key "$key" "$file"
-    sed -i "/<\/carrier_config>/d" "$file"
+    prepare_file_for_append "$file"
     echo "    <string name=\"$key\">$value</string>" >> "$file"
-    echo "</carrier_config>" >> "$file"
+    finish_file "$file"
 }
 
 upsert_int() {
@@ -83,9 +97,9 @@ upsert_int() {
     local value="$2"
     local file="$3"
     remove_key "$key" "$file"
-    sed -i "/<\/carrier_config>/d" "$file"
+    prepare_file_for_append "$file"
     echo "    <int name=\"$key\" value=\"$value\" />" >> "$file"
-    echo "</carrier_config>" >> "$file"
+    finish_file "$file"
 }
 
 upsert_int_array() {
@@ -103,9 +117,9 @@ upsert_int_array() {
     done
     echo "    </int-array>" >> "$MODDIR/temp_block.xml"
 
-    sed -i "/<\/carrier_config>/d" "$file"
+    prepare_file_for_append "$file"
     cat "$MODDIR/temp_block.xml" >> "$file"
-    echo "</carrier_config>" >> "$file"
+    finish_file "$file"
     rm "$MODDIR/temp_block.xml"
 }
 
@@ -122,9 +136,9 @@ upsert_string_array() {
     done
     echo "    </string-array>" >> "$MODDIR/temp_block.xml"
 
-    sed -i "/<\/carrier_config>/d" "$file"
+    prepare_file_for_append "$file"
     cat "$MODDIR/temp_block.xml" >> "$file"
-    echo "</carrier_config>" >> "$file"
+    finish_file "$file"
     rm "$MODDIR/temp_block.xml"
 }
 
@@ -137,6 +151,10 @@ for TARGET_FILE in $FOUND_FILES; do
         cp "$TARGET_FILE" "$TARGET_FILE.bak"
         chmod 660 "$TARGET_FILE.bak"
         chown radio:radio "$TARGET_FILE.bak"
+        # Try to preserve context
+        if [ -x "$(command -v restorecon)" ]; then
+             restorecon "$TARGET_FILE.bak"
+        fi
     fi
 
     # --- A. Basic Network Unlock ---
@@ -181,25 +199,25 @@ for TARGET_FILE in $FOUND_FILES; do
     log "Applying UI Enhancements..."
 
     # 5G+ Icon (Advanced Bands)
-    # Configure bands based on carrier
-    if echo "$TARGET_FILE" | grep -q "China_Unicom"; then
+    # Configure bands based on carrier name OR ID
+    if echo "$TARGET_FILE" | grep -qE "China_Unicom|1436"; then
         # Unicom: n78
         log "Configuring 5G+ bands for China Unicom (n78)..."
         upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
-    elif echo "$TARGET_FILE" | grep -q "China_Telecom"; then
+    elif echo "$TARGET_FILE" | grep -qE "China_Telecom|2236"; then
         # Telecom: n78
         log "Configuring 5G+ bands for China Telecom (n78)..."
         upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
-    elif echo "$TARGET_FILE" | grep -q "China_Mobile"; then
+    elif echo "$TARGET_FILE" | grep -qE "China_Mobile|1435"; then
         # Mobile: n41, n79
         log "Configuring 5G+ bands for China Mobile (n41, n79)..."
         upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 41 79
     elif echo "$TARGET_FILE" | grep -q "China_Broadnet"; then
-        # Broadnet: n79 (and n28 is low band)
+        # Broadnet: n79
         log "Configuring 5G+ bands for China Broadnet (n79)..."
         upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 79
     else
-        # Fallback (union of all common high speed bands)
+        # Fallback
         log "Configuring 5G+ bands for Generic (n41, n78, n79)..."
         upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 41 78 79
     fi
@@ -245,6 +263,15 @@ for TARGET_FILE in $FOUND_FILES; do
     # Fix permissions
     chown radio:radio "$TARGET_FILE"
     chmod 660 "$TARGET_FILE"
+
+    # Fix SELinux Context
+    if [ -x "$(command -v restorecon)" ]; then
+         restorecon "$TARGET_FILE"
+    fi
 done
 
-log "Done. All changes applied."
+log "Changes applied. Reloading carrier config..."
+# Force reload by killing phone process
+killall com.android.phone
+
+log "Done."
