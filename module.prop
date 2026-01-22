@@ -1,6 +1,6 @@
-id=pixel_8_cn_unicom_opt
-name=Pixel 8 China Unicom Optimization
+id=pixel_carrier_opt
+name=Pixel Carrier Optimization
 version=v1.0
 versionCode=1
 author=transwarp
-description=Unlocks 5G SA, VoLTE/VoNR, Optimizes QNS/Signal, Fixes GPS for China Unicom (1436) on Pixel 8.
+description=Unlocks 5G SA, VoLTE/VoNR, Optimizes QNS/Signal, Fixes GPS for Pixel devices. Currently configured for China Unicom (1436).

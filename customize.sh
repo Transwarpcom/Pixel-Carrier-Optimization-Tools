@@ -3,7 +3,7 @@
 SKIPUNZIP=0
 
 ui_print "****************************************"
-ui_print "*    Pixel 8 CN Unicom Optimization    *"
+ui_print "*      Pixel Carrier Optimization      *"
 ui_print "*           By transwarp               *"
 ui_print "****************************************"
 ui_print "* Unlocking 5G SA/NSA, VoLTE, VoNR..."

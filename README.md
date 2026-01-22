@@ -1,12 +1,12 @@
-# Pixel 8 China Unicom Optimization
+# Pixel Carrier Optimization
 
 **Author:** transwarp
 **Version:** v1.0
 
 ## Overview
-This Magisk/KernelSU module optimizes the Android system for Pixel 8 (shiba) running on China Unicom (Carrier ID 1436). It addresses common issues such as 5G restrictions, weak signal handover, and GPS configuration.
+This Magisk/KernelSU module optimizes the Android system for Pixel devices (tested on Pixel 8 shiba). It addresses common issues such as 5G restrictions, weak signal handover, and GPS configuration.
 
-> **Note:** While this project is structured to support any carrier, it is currently adapted specifically for China Unicom. If you need support for other carriers, please feel free to open an Issue or submit a Pull Request (PR) to modify the configuration.
+> **Note:** While this project is structured to support any carrier, it is currently configured for **China Unicom (Carrier ID 1436)**. If you need support for other carriers, please feel free to open an Issue or submit a Pull Request (PR) to modify the configuration.
 
 ## Features
 
@@ -36,9 +36,9 @@ This Magisk/KernelSU module optimizes the Android system for Pixel 8 (shiba) run
 The module uses a background service (`service.sh`) to detect the generation of the carrier config XML file located at `/data/user_de/0/com.android.phone/files/`. It then performs live XML injection to upsert the optimized keys without modifying the system partition permanently.
 
 ## Requirements
-- Pixel 8 (shiba)
+- Pixel Device (Pixel 8 tested)
 - Root access (Magisk or KernelSU)
-- China Unicom SIM
+- Target Carrier SIM (China Unicom for current config)
 
 ## Disclaimer
 Use at your own risk. Modifying carrier configurations can affect network connectivity.

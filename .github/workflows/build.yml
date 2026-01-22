@@ -16,10 +16,10 @@ jobs:
 
       - name: Zip Module
         run: |
-          zip -r pixel8_unicom_opt.zip . -x ".git/*" ".github/*" "README.md"
+          zip -r pixel_carrier_opt.zip . -x ".git/*" ".github/*" "README.md"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: Magisk Module
-          path: pixel8_unicom_opt.zip
+          path: pixel_carrier_opt.zip
