@@ -1,4 +1,4 @@
-name: Build Module
+name: Build & Release
 
 on:
   push:
@@ -11,15 +11,63 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Version
+        id: get_version
+        run: |
+          VERSION=$(grep "^version=" module.prop | cut -d'=' -f2)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Module Version: $VERSION"
+
+      - name: Generate Changelog
+        id: changelog
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "Previous tag: $PREV_TAG"
+
+          if [ -z "$PREV_TAG" ]; then
+            LOGS=$(git log --pretty=format:"* %s (%h)" --no-merges)
+          else
+            LOGS=$(git log --pretty=format:"* %s (%h)" --no-merges $PREV_TAG..HEAD)
+          fi
+
+          # Create a beautiful markdown body
+          echo "## 🚀 Changes in $VERSION" > release_notes.md
+          echo "" >> release_notes.md
+          echo "$LOGS" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "## 📦 Diff" >> release_notes.md
+          if [ -n "$PREV_TAG" ]; then
+             echo "View the full diff: [${PREV_TAG}...${{ github.ref_name }}](${{ github.server_url }}/${{ github.repository }}/compare/${PREV_TAG}...${{ github.ref_name }})" >> release_notes.md
+          else
+             echo "Initial Release" >> release_notes.md
+          fi
+
+          cat release_notes.md
 
       - name: Zip Module
         run: |
-          zip -r pixel_carrier_opt.zip . -x ".git/*" ".github/*" "README.md"
+          zip -r pixel_carrier_opt.zip . -x ".git/*" ".github/*" "README.md" "release_notes.md"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Magisk Module
           path: pixel_carrier_opt.zip
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release_notes.md
+          files: pixel_carrier_opt.zip
+          name: Pixel Carrier Optimization ${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
