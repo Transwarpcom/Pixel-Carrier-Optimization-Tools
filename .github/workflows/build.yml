@@ -72,19 +72,35 @@ jobs:
           name: Magisk Module
           path: pixel_carrier_opt.zip
 
-      - name: Update update.json
+      - name: Update update.json and CHANGELOG.md
         if: (github.ref == 'refs/heads/main' && env.TAG_EXISTS == 'false') || startsWith(github.ref, 'refs/tags/')
         run: |
           VERSION_CODE=$(grep "^versionCode=" module.prop | cut -d'=' -f2)
-          # Use jq if available, otherwise manual sed
-          # Assuming simple structure
+
+          # Update update.json
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" update.json
           sed -i "s/\"versionCode\": .*/\"versionCode\": $VERSION_CODE,/" update.json
 
+          # Prepend new changes to CHANGELOG.md
+          # Create a temp file with new header
+          echo "# Changelog" > changelog_tmp.md
+          echo "" >> changelog_tmp.md
+          echo "## $VERSION" >> changelog_tmp.md
+
+          # Extract logs from release_notes.md (skipping headers if needed, but release_notes has raw logs)
+          # We'll just take the bullet points from release_notes.md
+          grep "^*" release_notes.md >> changelog_tmp.md || echo "- Maintenance update" >> changelog_tmp.md
+          echo "" >> changelog_tmp.md
+
+          # Append old changelog (skipping the first line if it's "# Changelog")
+          tail -n +2 CHANGELOG.md >> changelog_tmp.md
+
+          mv changelog_tmp.md CHANGELOG.md
+
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add update.json
-          git commit -m "Update update.json for $VERSION" || echo "No changes to commit"
+          git add update.json CHANGELOG.md
+          git commit -m "Update update.json and CHANGELOG.md for $VERSION" || echo "No changes to commit"
           git push origin main
 
       - name: Create Release
