@@ -1,6 +1,6 @@
 #!/system/bin/sh
-# core.sh - Core logic for XML modification
-# Can be sourced or run directly
+# core.sh - Core logic for XML modification and mounting
+# Performs both direct modification and mount --bind overlay
 
 # If MODDIR is not set, try to determine it
 if [ -z "$MODDIR" ]; then
@@ -8,6 +8,7 @@ if [ -z "$MODDIR" ]; then
 fi
 
 LOGFILE="$MODDIR/service.log"
+CACHE_DIR="$MODDIR/carrier_cache"
 
 log() {
     echo "$(date "+%Y-%m-%d %H:%M:%S") - $1" >> "$LOGFILE"
@@ -16,13 +17,12 @@ log() {
 # Target directory
 TARGET_DIR="/data/user_de/0/com.android.phone/files"
 
-# Wait for at least one target file to appear (only if we expect to wait, e.g. boot)
-# But for core logic, we assume files might be there. If called from service.sh, it waits.
-# If called from action.sh, files should be there.
+# Ensure cache directory exists
+mkdir -p "$CACHE_DIR"
+chmod 755 "$CACHE_DIR"
 
 # Find files
 FOUND_FILES=""
-# Simple find, no wait loop here (caller handles waiting if needed)
 if [ -d "$TARGET_DIR" ]; then
     CANDIDATES=$(find "$TARGET_DIR" -type f -name "*carrier_config*.xml")
     for f in $CANDIDATES; do
@@ -127,19 +127,9 @@ upsert_string_array() {
     rm "$MODDIR/temp_block.xml"
 }
 
-# --- Apply Changes ---
-for TARGET_FILE in $FOUND_FILES; do
-    log "Processing $TARGET_FILE..."
-
-    # Backup
-    if [ ! -f "$TARGET_FILE.bak" ]; then
-        cp "$TARGET_FILE" "$TARGET_FILE.bak"
-        chmod 660 "$TARGET_FILE.bak"
-        chown radio:radio "$TARGET_FILE.bak"
-        if [ -x "$(command -v restorecon)" ]; then
-             restorecon "$TARGET_FILE.bak"
-        fi
-    fi
+# Apply changes to a specific file
+apply_mods() {
+    local TARGET_FILE="$1"
 
     # 5G SA/NSA
     upsert_int_array "carrier_nr_availabilities_int_array" "$TARGET_FILE" 1 2
@@ -199,11 +189,64 @@ for TARGET_FILE in $FOUND_FILES; do
     upsert_boolean "carrier_rcs_provisioning_required_bool" "false" "$TARGET_FILE"
     upsert_int "imssms.sms_max_retry_over_ims_count_int" 3 "$TARGET_FILE"
     upsert_boolean "ignore_data_enabled_changed_for_video_calls" "true" "$TARGET_FILE"
+}
 
-    # Fix perms
-    chown radio:radio "$TARGET_FILE"
-    chmod 660 "$TARGET_FILE"
+# --- Loop processing ---
+for ORIG_FILE in $FOUND_FILES; do
+    log "Processing $ORIG_FILE..."
+    FILENAME=$(basename "$ORIG_FILE")
+    CACHE_FILE="$CACHE_DIR/$FILENAME"
+
+    # 1. Modify Original File (In-Place)
+    # Backup first
+    if [ ! -f "$ORIG_FILE.bak" ]; then
+        cp "$ORIG_FILE" "$ORIG_FILE.bak"
+        chmod 660 "$ORIG_FILE.bak"
+        chown radio:radio "$ORIG_FILE.bak"
+    fi
+
+    # Unmount if already mounted to allow modification of underlying file (if we want to mod it too)
+    # But mounting over it hides it. We should mod the file, then mount.
+    # Check if mounted
+    if grep -q "$ORIG_FILE" /proc/mounts; then
+        log "Unmounting existing overlay on $ORIG_FILE"
+        umount "$ORIG_FILE"
+    fi
+
+    # Apply mods to original file directly
+    log "Modifying original file directly..."
+    apply_mods "$ORIG_FILE"
+
+    # Fix perms/context on original
+    chown radio:radio "$ORIG_FILE"
+    chmod 660 "$ORIG_FILE"
     if [ -x "$(command -v restorecon)" ]; then
-         restorecon "$TARGET_FILE"
+         restorecon "$ORIG_FILE"
+    fi
+
+    # 2. Create Cached Copy and Mount (Overlay)
+    log "Creating cached copy for mount bind..."
+    cp "$ORIG_FILE" "$CACHE_FILE"
+
+    # Apply mods to cache file (redundant but ensures clean state if cp copied pre-mod)
+    # Actually if we just modded ORIG_FILE, CACHE_FILE is already modded.
+    # But to be safe against system overwrites, we should re-run apply_mods or just trust the copy.
+    # Let's run apply_mods on CACHE_FILE to be 100% sure it has our keys even if ORIG_FILE was reverted by system in split second.
+    apply_mods "$CACHE_FILE"
+
+    # Set perms on cache file
+    chmod 660 "$CACHE_FILE"
+    chown radio:radio "$CACHE_FILE"
+    if [ -x "$(command -v restorecon)" ]; then
+         restorecon "$CACHE_FILE"
+    fi
+
+    # Mount bind
+    log "Mounting $CACHE_FILE over $ORIG_FILE"
+    mount --bind "$CACHE_FILE" "$ORIG_FILE"
+    if [ $? -eq 0 ]; then
+        log "Mount successful."
+    else
+        log "Mount failed!"
     fi
 done
