@@ -1,12 +1,12 @@
 # Pixel Carrier Optimization
 
 **Author:** transwarp
-**Version:** v1.0
+**Version:** v1.3
 
 ## Overview
 This Magisk/KernelSU module optimizes the Android system for Pixel devices (tested on Pixel 8 shiba). It addresses common issues such as 5G restrictions, weak signal handover, and GPS configuration.
 
-> **Note:** While this project is structured to support any carrier, it is currently configured for **China Unicom (Carrier ID 1436)**. If you need support for other carriers, please feel free to open an Issue or submit a Pull Request (PR) to modify the configuration.
+> **Note:** While this project is structured to support any carrier, it is currently configured for **China Unicom** and **China Telecom**. If you need support for other carriers, please feel free to open an Issue or submit a Pull Request (PR).
 
 ## Features
 
@@ -22,6 +22,7 @@ This Magisk/KernelSU module optimizes the Android system for Pixel devices (test
 ### GPS/GNSS Fix
 - Replaces inaccessible Google PSDS/LTO servers (`agnss.goog`) with Broadcom servers (`glpals.com`).
 - Reduces battery drain caused by failed connection retries.
+- Corrects server URLs to v5 format for Pixel 6/7/8.
 
 ### UI Enhancements
 - Enables **5G+** icon for N78 band.
@@ -33,12 +34,12 @@ This Magisk/KernelSU module optimizes the Android system for Pixel devices (test
 3. The module will automatically inject configurations into the carrier config file after boot.
 
 ## How it Works
-The module uses a background service (`service.sh`) to detect the generation of the carrier config XML file located at `/data/user_de/0/com.android.phone/files/`. It then performs live XML injection to upsert the optimized keys without modifying the system partition permanently.
+The module uses a background service (`service.sh`) to detect the generation of carrier config XML files located at `/data/user_de/0/com.android.phone/files/`. It scans for files belonging to China Unicom or China Telecom and performs live XML injection to upsert the optimized keys.
 
 ## Requirements
 - Pixel Device (Pixel 8 tested)
 - Root access (Magisk or KernelSU)
-- Target Carrier SIM (China Unicom for current config)
+- Target Carrier SIM (China Unicom or China Telecom)
 
 ## Disclaimer
 Use at your own risk. Modifying carrier configurations can affect network connectivity.
