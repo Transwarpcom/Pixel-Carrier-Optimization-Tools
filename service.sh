@@ -144,12 +144,10 @@ upsert_int "qns_handover_guarding_timer_millis_int" 1000
 upsert_int_array "qns.voice_ngran_ssrsrp_int_array" -124 -124 -124 -124
 
 log "Applying GPS Corrections..."
-# Replace agnss.goog PSDS/LTO servers with Broadcom
-URLS="http://gllto.glpals.com/7day/v2/latest/lto2.dat"
-URLS2="http://gllto.glpals.com/7day/v2/latest/lto.dat"
-URLS3="http://gllto1.glpals.com/7day/v2/latest/lto2.dat"
-URLS4="http://gllto1.glpals.com/7day/v2/latest/lto.dat"
-upsert_string_array "gps.psds_servers_string_array" "$URLS" "$URLS2" "$URLS3" "$URLS4"
+# Replace agnss.goog PSDS/LTO servers with Broadcom (v5 for Pixel 6/7/8)
+URLS="https://gllto.glpals.com/7day/v5/latest/lto2.dat"
+URLS2="https://gllto1.glpals.com/7day/v5/latest/lto2.dat"
+upsert_string_array "gps.psds_servers_string_array" "$URLS" "$URLS2"
 
 log "Applying UI Enhancements..."
 # Enable 5G+ for N78

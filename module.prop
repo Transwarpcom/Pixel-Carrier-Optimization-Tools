@@ -1,6 +1,6 @@
 id=pixel_carrier_opt
 name=Pixel Carrier Optimization
-version=v1.1
-versionCode=2
+version=v1.2
+versionCode=3
 author=transwarp
 description=Unlocks 5G SA, VoLTE/VoNR, Optimizes QNS/Signal, Fixes GPS for Pixel devices. Currently configured for China Unicom (1436).
