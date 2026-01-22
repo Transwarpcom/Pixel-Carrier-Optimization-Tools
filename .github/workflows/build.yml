@@ -12,14 +12,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Zip Module
         run: |
           zip -r pixel_carrier_opt.zip . -x ".git/*" ".github/*" "README.md"
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Magisk Module
           path: pixel_carrier_opt.zip
