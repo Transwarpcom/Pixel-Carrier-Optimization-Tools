@@ -24,9 +24,10 @@ for i in $(seq 1 60); do
     CANDIDATES=$(find "$TARGET_DIR" -type f -name "*carrier_config*.xml")
     FOUND_FILES=""
     for f in $CANDIDATES; do
-        # Check for Names OR Carrier IDs
+        # Check for Names OR Carrier IDs OR MCC/MNC
         # 1435: Mobile, 1436: Unicom, 2236: Telecom
-        if echo "$f" | grep -qE "China_Unicom|China_Telecom|China_Mobile|China_Broadnet|1435|1436|2236"; then
+        # Broadnet likely uses mccmnc_460_15 as it has no AOSP Carrier ID yet.
+        if echo "$f" | grep -qE "China_Unicom|China_Telecom|China_Mobile|China_Broadnet|1435|1436|2236|mccmnc_460_15"; then
             FOUND_FILES="$FOUND_FILES $f"
         fi
     done
@@ -199,7 +200,7 @@ for TARGET_FILE in $FOUND_FILES; do
     log "Applying UI Enhancements..."
 
     # 5G+ Icon (Advanced Bands)
-    # Configure bands based on carrier name OR ID
+    # Configure bands based on carrier name OR ID OR MCCMNC
     if echo "$TARGET_FILE" | grep -qE "China_Unicom|1436"; then
         # Unicom: n78
         log "Configuring 5G+ bands for China Unicom (n78)..."
@@ -212,7 +213,7 @@ for TARGET_FILE in $FOUND_FILES; do
         # Mobile: n41, n79
         log "Configuring 5G+ bands for China Mobile (n41, n79)..."
         upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 41 79
-    elif echo "$TARGET_FILE" | grep -q "China_Broadnet"; then
+    elif echo "$TARGET_FILE" | grep -qE "China_Broadnet|mccmnc_460_15"; then
         # Broadnet: n79
         log "Configuring 5G+ bands for China Broadnet (n79)..."
         upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 79
