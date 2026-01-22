@@ -186,6 +186,9 @@ for TARGET_FILE in $FOUND_FILES; do
     upsert_boolean "show_4g_for_lte_data_icon_bool" "true" "$TARGET_FILE"
     upsert_boolean "editable_enhanced_4g_lte_bool" "true" "$TARGET_FILE"
 
+    # Icon config - Update to display 5G_PLUS for connected_mmwave
+    upsert_string "5g_icon_configuration_string" "connected_mmwave:5G_PLUS,connected:5G,connected_rrc_idle:5G,not_restricted_rrc_idle:5G,not_restricted_rrc_con:5G" "$TARGET_FILE"
+
     # Signal Bars (Honest Display)
     # 5G: [-125, -115, -105, -95]
     upsert_int_array "5g_nr_ssrsrp_thresholds_int_array" "$TARGET_FILE" -125 -115 -105 -95
