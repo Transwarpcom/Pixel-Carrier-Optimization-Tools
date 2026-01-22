@@ -24,7 +24,7 @@ for i in $(seq 1 60); do
     CANDIDATES=$(find "$TARGET_DIR" -type f -name "*carrier_config*.xml")
     FOUND_FILES=""
     for f in $CANDIDATES; do
-        if echo "$f" | grep -qE "China_Unicom|China_Telecom"; then
+        if echo "$f" | grep -qE "China_Unicom|China_Telecom|China_Mobile|China_Broadnet"; then
             FOUND_FILES="$FOUND_FILES $f"
         fi
     done
@@ -37,7 +37,7 @@ for i in $(seq 1 60); do
 done
 
 if [ -z "$FOUND_FILES" ]; then
-    log "No target files (Unicom/Telecom) found after waiting. Exiting."
+    log "No target files (Unicom/Telecom/Mobile/Broadnet) found after waiting. Exiting."
     exit 1
 fi
 

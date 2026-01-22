@@ -1,12 +1,12 @@
 # Pixel Carrier Optimization
 
 **Author:** transwarp
-**Version:** v1.4
+**Version:** v1.6
 
 ## Overview
 This Magisk/KernelSU module optimizes the Android system for Pixel devices (tested on Pixel 8 shiba). It addresses common issues such as 5G restrictions, weak signal handover, and GPS configuration.
 
-> **Note:** While this project is structured to support any carrier, it is currently configured for **China Unicom** and **China Telecom**. If you need support for other carriers, please feel free to open an Issue or submit a Pull Request (PR).
+> **Note:** While this project is structured to support any carrier, it is currently configured for **China Unicom**, **China Telecom**, **China Mobile**, and **China Broadnet**. If you need support for other carriers, please feel free to open an Issue or submit a Pull Request (PR).
 
 ## Features
 
@@ -44,12 +44,12 @@ This Magisk/KernelSU module optimizes the Android system for Pixel devices (test
 3. The module will automatically inject configurations into the carrier config file after boot.
 
 ## How it Works
-The module uses a background service (`service.sh`) to detect the generation of carrier config XML files located at `/data/user_de/0/com.android.phone/files/`. It scans for files belonging to China Unicom or China Telecom and performs live XML injection to upsert the optimized keys.
+The module uses a background service (`service.sh`) to detect the generation of carrier config XML files located at `/data/user_de/0/com.android.phone/files/`. It scans for files belonging to supported carriers and performs live XML injection to upsert the optimized keys.
 
 ## Requirements
 - Pixel Device (Pixel 8 tested)
 - Root access (Magisk or KernelSU)
-- Target Carrier SIM (China Unicom or China Telecom)
+- Target Carrier SIM (China Unicom, China Telecom, China Mobile, or China Broadnet)
 
 ## Disclaimer
 Use at your own risk. Modifying carrier configurations can affect network connectivity.
