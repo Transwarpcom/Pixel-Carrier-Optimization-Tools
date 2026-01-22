@@ -4,3 +4,4 @@ version=v1.4
 versionCode=5
 author=transwarp
 description=Unlocks 5G SA, VoLTE/VoNR, Optimizes QNS/Signal, Fixes GPS, APN & RCS for Pixel devices. Configured for China Unicom (1436) and China Telecom.
+updateJson=https://raw.githubusercontent.com/Transwarpcom/Pixel-Carrier-Optimization-Tools/main/update.json
