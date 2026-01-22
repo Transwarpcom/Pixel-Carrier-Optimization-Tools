@@ -139,44 +139,87 @@ for TARGET_FILE in $FOUND_FILES; do
         chown radio:radio "$TARGET_FILE.bak"
     fi
 
-    log "Applying 5G & IMS Unlock to $TARGET_FILE..."
+    # --- A. Basic Network Unlock ---
+    log "Applying 5G & IMS Unlock..."
+    # 5G SA/NSA (1=NSA, 2=SA)
     upsert_int_array "carrier_nr_availabilities_int_array" "$TARGET_FILE" 1 2
+
+    # VoLTE / VoNR / VoWiFi / ViLTE
     upsert_boolean "carrier_volte_available_bool" "true" "$TARGET_FILE"
-    upsert_boolean "carrier_vonr_available_bool" "true" "$TARGET_FILE"
+    upsert_boolean "vonr_enabled_bool" "true" "$TARGET_FILE"
+    upsert_boolean "vonr_setting_visibility_bool" "true" "$TARGET_FILE"
     upsert_boolean "carrier_wfc_ims_available_bool" "true" "$TARGET_FILE"
-    upsert_boolean "carrier_wfc_ims_roaming_available_bool" "true" "$TARGET_FILE"
+    upsert_boolean "carrier_vt_available_bool" "true" "$TARGET_FILE"
+
+    # --- B. Subway & Signal Handover (QNS) ---
+    log "Applying Signal Handover Optimizations..."
+    # Reduce handover guard timer to 1s
+    remove_key "qns.ho_restrict_time_with_low_rtp_quality_int_array" "$TARGET_FILE"
+    upsert_int "qns.minimum_handover_guarding_timer_ms_int" 1000 "$TARGET_FILE"
+
+    # Deep 5G Lock (Voice & Idle)
+    # Lower threshold to -124dBm to prevent dropping 5G
+    upsert_int_array "qns.voice_ngran_ssrsrp_int_array" "$TARGET_FILE" -120 -124
+    upsert_int_array "qns.idle_ngran_ssrsrp_int_array" "$TARGET_FILE" -120 -124
+
+    # VoWiFi Thresholds (Relax to -90dBm)
+    upsert_int_array "qns.voice_wifi_rssi_int_array" "$TARGET_FILE" -85 -90
+    upsert_int_array "qns.idle_wifi_rssi_int_array" "$TARGET_FILE" -85 -90
+
+    # --- C. Traffic & Performance ---
+    log "Applying Traffic & Performance Fixes..."
+    # Unmetered 5G
+    upsert_boolean "unmetered_nr_nsa_bool" "true" "$TARGET_FILE"
+    upsert_boolean "unmetered_nr_sa_bool" "true" "$TARGET_FILE"
     upsert_boolean "unmetered_nr_nsa_mmwave_bool" "true" "$TARGET_FILE"
-    upsert_boolean "unmetered_nr_nsa_sub6_bool" "true" "$TARGET_FILE"
     upsert_boolean "unmetered_nr_sa_mmwave_bool" "true" "$TARGET_FILE"
-    upsert_boolean "unmetered_nr_sa_sub6_bool" "true" "$TARGET_FILE"
 
-    log "Applying Subway Signal Optimization to $TARGET_FILE..."
-    # QNS handover guarding timer (1000ms)
-    upsert_int "qns_handover_guarding_timer_millis_int" 1000 "$TARGET_FILE"
+    # TCP Buffers
+    upsert_string "tcp_buffersizes_string" "2097152,4194304,8388608,4096,1048576,4194304" "$TARGET_FILE"
 
-    # qns.voice_ngran_ssrsrp_int_array (Lower to -124dBm)
-    upsert_int_array "qns.voice_ngran_ssrsrp_int_array" "$TARGET_FILE" -124 -124 -124 -124
+    # --- D. Visual & UI ---
+    log "Applying UI Enhancements..."
+    # 5G+ Icon (N78)
+    upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
 
-    log "Applying GPS Corrections to $TARGET_FILE..."
-    # Replace agnss.goog PSDS/LTO servers with Broadcom (v5 for Pixel 6/7/8)
-    URLS="https://gllto.glpals.com/7day/v5/latest/lto2.dat"
-    URLS2="https://gllto1.glpals.com/7day/v5/latest/lto2.dat"
-    upsert_string_array "gps.psds_servers_string_array" "$TARGET_FILE" "$URLS" "$URLS2"
+    # 4G Icon
+    upsert_boolean "show_4g_for_lte_data_icon_bool" "true" "$TARGET_FILE"
+    upsert_boolean "editable_enhanced_4g_lte_bool" "true" "$TARGET_FILE"
 
-    log "Applying UI Enhancements to $TARGET_FILE..."
-    # Enable 5G+ for N78
-    upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 77 78
-
-    # Icon config
-    upsert_string "5g_icon_configuration_string" "connected_mmwave:5G_PLUS,connected:5G,not_restricted_rrc_idle:5G,not_restricted_rrc_con:5G" "$TARGET_FILE"
-
-    # Signal Bars
+    # Signal Bars (Honest Display)
+    # 5G: [-125, -115, -105, -95]
+    upsert_int_array "5g_nr_ssrsrp_thresholds_int_array" "$TARGET_FILE" -125 -115 -105 -95
+    # LTE: [-125, -115, -105, -95]
     upsert_int_array "lte_rsrp_thresholds_int_array" "$TARGET_FILE" -125 -115 -105 -95
-    upsert_int_array "nr_rsrp_thresholds_int_array" "$TARGET_FILE" -125 -115 -105 -95
+    # Signal Quality (SNR)
+    upsert_int_array "5g_nr_ssrsrq_thresholds_int_array" "$TARGET_FILE" -43 -20 -15 -10
+
+    # --- E. GPS/GNSS Fix ---
+    log "Applying GPS Corrections..."
+    # Use Broadcom v5 servers directly
+    upsert_string "gps.normal_psds_server" "https://gllto.glpals.com/rto/v1/latest/rto.dat" "$TARGET_FILE"
+    upsert_string "gps.longterm_psds_server_1" "https://gllto.glpals.com/7day/v5/latest/lto2.dat" "$TARGET_FILE"
+    upsert_string "gps.realtime_psds_server" "https://gllto.glpals.com/rtistatus4.dat" "$TARGET_FILE"
+
+    # --- F. Advanced / Misc ---
+    log "Applying Advanced Fixes (APN, RCS)..."
+    # APN Freedom
+    remove_key "read_only_apn_types_string_array" "$TARGET_FILE"
+    remove_key "read_only_apn_fields_string_array" "$TARGET_FILE"
+    upsert_boolean "apn_expand_bool" "true" "$TARGET_FILE"
+
+    # RCS Fix (Disable provisioning check)
+    upsert_boolean "carrier_rcs_provisioning_required_bool" "false" "$TARGET_FILE"
+
+    # SMS Reliability
+    upsert_int "imssms.sms_max_retry_over_ims_count_int" 3 "$TARGET_FILE"
+
+    # Video Call Data
+    upsert_boolean "ignore_data_enabled_changed_for_video_calls" "true" "$TARGET_FILE"
 
     # Fix permissions
     chown radio:radio "$TARGET_FILE"
     chmod 660 "$TARGET_FILE"
 done
 
-log "Done. Changes applied."
+log "Done. All changes applied."

@@ -1,7 +1,7 @@
 # Pixel Carrier Optimization
 
 **Author:** transwarp
-**Version:** v1.3
+**Version:** v1.4
 
 ## Overview
 This Magisk/KernelSU module optimizes the Android system for Pixel devices (tested on Pixel 8 shiba). It addresses common issues such as 5G restrictions, weak signal handover, and GPS configuration.
@@ -11,22 +11,32 @@ This Magisk/KernelSU module optimizes the Android system for Pixel devices (test
 ## Features
 
 ### 5G & IMS Unlock
-- Forces 5G SA/NSA availability.
-- Enables VoLTE, VoNR, and VoWiFi.
-- Unlocks unmetered 5G Sub6/mmWave.
+- **5G SA/NSA:** Force enables Standalone (SA) and Non-Standalone (NSA) modes.
+- **VoLTE & VoNR:** Enables Voice over LTE and Voice over New Radio.
+- **VoWiFi:** Enables WiFi Calling with relaxed signal thresholds (works in more rooms).
+- **ViLTE:** Enables Video over LTE.
 
 ### Signal & Handover Optimization (QNS)
-- **Subway Mode:** More aggressive handover guarding timer (1000ms) to prevent signal stickiness.
-- **5G Retention:** Lowers `qns.voice_ngran_ssrsrp` thresholds to -124dBm to stay on 5G longer before falling back to 4G.
+- **Subway Mode:** Shortens handover guarding timer (1s) to allow faster escape from bad base stations.
+- **Deep 5G Lock:** Lowers `qns.voice_ngran_ssrsrp` thresholds to -124dBm to prevent premature fallback to 4G/3G.
+- **Signal Recovery:** Relaxed signal quality (SNR) requirements.
 
 ### GPS/GNSS Fix
 - Replaces inaccessible Google PSDS/LTO servers (`agnss.goog`) with Broadcom servers (`glpals.com`).
-- Reduces battery drain caused by failed connection retries.
-- Corrects server URLs to v5 format for Pixel 6/7/8.
+- Uses correct v5 URLs for Pixel 6/7/8.
+- Restores A-GPS functionality for faster locking.
 
 ### UI Enhancements
 - Enables **5G+** icon for N78 band.
-- Adjusts signal bar thresholds so full bars are displayed at -95dBm (more honest/realistic for the region).
+- **Honest Signal Bars:** Adjusts thresholds so full bars are displayed at -95dBm.
+- Shows "4G" icon instead of "LTE".
+- Enables "Enhanced 4G LTE" toggle in settings.
+
+### Advanced Features
+- **APN Freedom:** Unlocks APN editing (IPv4/v6 settings).
+- **RCS Fix:** Disables carrier provisioning check to fix "Verifying number" stuck issues.
+- **Unmetered 5G:** Marks 5G as unmetered (bypasses some carrier throttling logic).
+- **TCP Optimization:** Tuned buffer sizes.
 
 ## Installation
 1. Install via Magisk Manager or KernelSU.
