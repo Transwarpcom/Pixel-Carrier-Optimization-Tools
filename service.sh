@@ -24,7 +24,7 @@ for i in $(seq 1 60); do
     CANDIDATES=$(find "$TARGET_DIR" -type f -name "*carrier_config*.xml")
     FOUND_FILES=""
     for f in $CANDIDATES; do
-        if echo "$f" | grep -qE "China_Unicom|China_Telecom"; then
+        if echo "$f" | grep -qE "China_Unicom|China_Telecom|China_Mobile|China_Broadnet"; then
             FOUND_FILES="$FOUND_FILES $f"
         fi
     done
@@ -37,7 +37,7 @@ for i in $(seq 1 60); do
 done
 
 if [ -z "$FOUND_FILES" ]; then
-    log "No target files (Unicom/Telecom) found after waiting. Exiting."
+    log "No target files (Unicom/Telecom/Mobile/Broadnet) found after waiting. Exiting."
     exit 1
 fi
 
@@ -179,12 +179,37 @@ for TARGET_FILE in $FOUND_FILES; do
 
     # --- D. Visual & UI ---
     log "Applying UI Enhancements..."
-    # 5G+ Icon (N78)
-    upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
+
+    # 5G+ Icon (Advanced Bands)
+    # Configure bands based on carrier
+    if echo "$TARGET_FILE" | grep -q "China_Unicom"; then
+        # Unicom: n78
+        log "Configuring 5G+ bands for China Unicom (n78)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
+    elif echo "$TARGET_FILE" | grep -q "China_Telecom"; then
+        # Telecom: n78
+        log "Configuring 5G+ bands for China Telecom (n78)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
+    elif echo "$TARGET_FILE" | grep -q "China_Mobile"; then
+        # Mobile: n41, n79
+        log "Configuring 5G+ bands for China Mobile (n41, n79)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 41 79
+    elif echo "$TARGET_FILE" | grep -q "China_Broadnet"; then
+        # Broadnet: n79 (and n28 is low band)
+        log "Configuring 5G+ bands for China Broadnet (n79)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 79
+    else
+        # Fallback (union of all common high speed bands)
+        log "Configuring 5G+ bands for Generic (n41, n78, n79)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 41 78 79
+    fi
 
     # 4G Icon
     upsert_boolean "show_4g_for_lte_data_icon_bool" "true" "$TARGET_FILE"
     upsert_boolean "editable_enhanced_4g_lte_bool" "true" "$TARGET_FILE"
+
+    # Icon config - Update to display 5G_PLUS for connected_mmwave
+    upsert_string "5g_icon_configuration_string" "connected_mmwave:5G_PLUS,connected:5G,connected_rrc_idle:5G,not_restricted_rrc_idle:5G,not_restricted_rrc_con:5G" "$TARGET_FILE"
 
     # Signal Bars (Honest Display)
     # 5G: [-125, -115, -105, -95]
