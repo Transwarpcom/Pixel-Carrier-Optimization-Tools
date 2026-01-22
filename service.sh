@@ -179,8 +179,30 @@ for TARGET_FILE in $FOUND_FILES; do
 
     # --- D. Visual & UI ---
     log "Applying UI Enhancements..."
-    # 5G+ Icon (N78)
-    upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
+
+    # 5G+ Icon (Advanced Bands)
+    # Configure bands based on carrier
+    if echo "$TARGET_FILE" | grep -q "China_Unicom"; then
+        # Unicom: n78
+        log "Configuring 5G+ bands for China Unicom (n78)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
+    elif echo "$TARGET_FILE" | grep -q "China_Telecom"; then
+        # Telecom: n78
+        log "Configuring 5G+ bands for China Telecom (n78)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 78
+    elif echo "$TARGET_FILE" | grep -q "China_Mobile"; then
+        # Mobile: n41, n79
+        log "Configuring 5G+ bands for China Mobile (n41, n79)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 41 79
+    elif echo "$TARGET_FILE" | grep -q "China_Broadnet"; then
+        # Broadnet: n79 (and n28 is low band)
+        log "Configuring 5G+ bands for China Broadnet (n79)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 79
+    else
+        # Fallback (union of all common high speed bands)
+        log "Configuring 5G+ bands for Generic (n41, n78, n79)..."
+        upsert_int_array "additional_nr_advanced_bands_int_array" "$TARGET_FILE" 41 78 79
+    fi
 
     # 4G Icon
     upsert_boolean "show_4g_for_lte_data_icon_bool" "true" "$TARGET_FILE"
