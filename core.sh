@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # core.sh - Core logic for XML modification and mounting
-# Performs both direct modification and mount --bind overlay
+# Uses mount --bind to overlay modified configurations
 
 # If MODDIR is not set, try to determine it
 if [ -z "$MODDIR" ]; then
@@ -20,6 +20,7 @@ TARGET_DIR="/data/user_de/0/com.android.phone/files"
 # Ensure cache directory exists
 mkdir -p "$CACHE_DIR"
 chmod 755 "$CACHE_DIR"
+chown radio:radio "$CACHE_DIR"
 
 # Find files
 FOUND_FILES=""
@@ -34,6 +35,7 @@ fi
 
 if [ -z "$FOUND_FILES" ]; then
     log "No target files found in core.sh run."
+    # If run from action.sh, we might want to exit, but let's return error code
     return 1 2>/dev/null || exit 1
 fi
 
@@ -197,55 +199,33 @@ for ORIG_FILE in $FOUND_FILES; do
     FILENAME=$(basename "$ORIG_FILE")
     CACHE_FILE="$CACHE_DIR/$FILENAME"
 
-    # 1. Modify Original File (In-Place)
-    # Backup first
-    if [ ! -f "$ORIG_FILE.bak" ]; then
-        cp "$ORIG_FILE" "$ORIG_FILE.bak"
-        chmod 660 "$ORIG_FILE.bak"
-        chown radio:radio "$ORIG_FILE.bak"
-    fi
-
-    # Unmount if already mounted to allow modification of underlying file (if we want to mod it too)
-    # But mounting over it hides it. We should mod the file, then mount.
-    # Check if mounted
+    # 1. Unmount if needed (to access original or just reset)
     if grep -q "$ORIG_FILE" /proc/mounts; then
         log "Unmounting existing overlay on $ORIG_FILE"
         umount "$ORIG_FILE"
     fi
 
-    # Apply mods to original file directly
-    log "Modifying original file directly..."
-    apply_mods "$ORIG_FILE"
-
-    # Fix perms/context on original
-    chown radio:radio "$ORIG_FILE"
-    chmod 660 "$ORIG_FILE"
-    if [ -x "$(command -v restorecon)" ]; then
-         restorecon "$ORIG_FILE"
-    fi
-
-    # 2. Create Cached Copy and Mount (Overlay)
-    log "Creating cached copy for mount bind..."
+    # 2. Copy original to cache
     cp "$ORIG_FILE" "$CACHE_FILE"
 
-    # Apply mods to cache file (redundant but ensures clean state if cp copied pre-mod)
-    # Actually if we just modded ORIG_FILE, CACHE_FILE is already modded.
-    # But to be safe against system overwrites, we should re-run apply_mods or just trust the copy.
-    # Let's run apply_mods on CACHE_FILE to be 100% sure it has our keys even if ORIG_FILE was reverted by system in split second.
+    # 3. Apply mods to cache file
+    log "Applying mods to cached copy..."
     apply_mods "$CACHE_FILE"
 
-    # Set perms on cache file
+    # 4. Set perms/context on cache file
     chmod 660 "$CACHE_FILE"
     chown radio:radio "$CACHE_FILE"
     if [ -x "$(command -v restorecon)" ]; then
          restorecon "$CACHE_FILE"
     fi
 
-    # Mount bind
+    # 5. Mount bind
     log "Mounting $CACHE_FILE over $ORIG_FILE"
     mount --bind "$CACHE_FILE" "$ORIG_FILE"
     if [ $? -eq 0 ]; then
         log "Mount successful."
+        # Also restorecon the mount point if possible/needed (sometimes mount hides context)
+        # restorecon "$ORIG_FILE"
     else
         log "Mount failed!"
     fi
